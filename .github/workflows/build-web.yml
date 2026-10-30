@@ -1,1 +1,43 @@
+name: Deploy Web
 
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Compiler la version web
+        run: |
+          flutter create --platforms=web --project-name uber_demo --org com.demo build_web
+          cp -r lib build_web/
+          cp pubspec.yaml build_web/
+          cd build_web
+          flutter pub get
+          flutter build web --release --base-href "/mon-app/"
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: build_web/build/web
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
