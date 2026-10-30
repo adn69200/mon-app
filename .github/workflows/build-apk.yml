@@ -1,0 +1,47 @@
+name: Build APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Générer le projet Android et compiler
+        run: |
+          flutter create --platforms=android --project-name uber_demo --org com.demo build_app
+          cp -r lib build_app/
+          cp pubspec.yaml build_app/
+          cd build_app
+          flutter pub get
+          flutter build apk --release
+
+      - name: Sauvegarder l'APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: demo-apk
+          path: build_app/build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Publier une release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: demo-${{ github.run_number }}
+          name: Démo ${{ github.run_number }}
+          files: build_app/build/app/outputs/flutter-apk/app-release.apk
